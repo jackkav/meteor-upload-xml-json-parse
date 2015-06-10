@@ -18,50 +18,57 @@ if (Meteor.isClient) {
   });
   Template.task.helpers({
     thisTitle: function (id) {
-      return Session.get("result"+id).title;
+      //console.log(Session.get("result"+id).journal-meta);
+      return Session.get("title"+id);
     },
     thisAuthor: function (id) {
-      return Session.get("result"+id).author;
+      return Session.get("author"+id);
     },
     thisAbstract: function (id) {
-      return Session.get("result"+id).abstract;
-    },
-    output: function (id) {
-      var path = "http://localhost:3000"+Images.findOne({_id:id}).url();
-      Meteor.call('convertXmlToJson', path, function(error, result) {
-       if(error){
-         console.log(error)
-       }else{
-        // console.log(result)
-        Session.set('result'+id,result.root);
+      return Session.get("abstract"+id);
+   },
+   output: function (id) {
+    var path = "http://localhost:3000"+Images.findOne({_id:id}).url();
+    var filename = Images.findOne({_id:id}).copies.images.key;
+    var newPath = '/uploads/'+filename;
+    Meteor.call('convertXmlToJson', newPath, function(error, result) {
+     if(error){
+       console.log(error)
+     }else{
+      // debugger
+        // console.log(result.front['article-meta']['title-group']['article-title'])
+        Session.set('title'+id,result.front['article-meta']['title-group']['article-title']);
+
+        var auth = result.front['article-meta']['contrib-group']['contrib'][0]['name']['surname']['_Data'];
+
+        Session.set('author'+id, auth);
+
+        var abstract = result.front['article-meta']['abstract']["p"]['_Data'];
+
+
+        // console.log(str);
+        Session.set('abstract'+id, abstract);
       }
     });
-    }
-  });
+  }
+});
 
   Template.body.helpers({
     tasks: function () {
       return Images.find();
-}
+    }
 
-});
+  });
 
 }
 
 if (Meteor.isServer) {
 
-  var getLocationAsync = function (path, cb){
-    cb && cb(null, HTTP.get(path).content);
-  };
-  var getJsonFromXml = function (xml, cb){
-    cb && cb(null, xml2js.parseString(xml));
-  };
 }
 
 Meteor.methods({
-  convertXmlToJson: function(path){
-    var getLocationSync = Meteor.wrapAsync(getLocationAsync)
-    var xml = getLocationSync(path)
-    return  xml2js.parseStringSync(xml);
+    convertXmlToJson: function(path){
+    var xml = XML.parse(path);
+    return  xml;
   }
 });
